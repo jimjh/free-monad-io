@@ -2,9 +2,18 @@ sealed trait Console[A]
 case object GetLine extends Console[String]
 case class PutLine(s: String) extends Console[Unit]
 
-// F = Console
-
 object main {
+
+  type Id[A] = A
+
+  implicit object ConsoleEffect extends (Console ~> Id) {
+    def apply[A](r: Console[A]): A =
+      r match {
+        case GetLine => readLine
+        case PutLine(s) => println(s)
+      }
+  }
+
   type ConsoleIO[A] = IO[Console, A]
 
   val getLine: ConsoleIO[String] =
@@ -22,7 +31,52 @@ object main {
       _ <- putLine("What is your name?")
       name <- getLine
       _ <- putLine("Hello, " ++ name)
-    } yield Return(())
-    println(ask)
+    } yield ()
+
+    println(ask.runIO(ConsoleEffect))
   }
 }
+
+/*
+ * val ask: ConsoleIO[Unit] = for {
+ *   _ <- putLine("What is your name?")
+ *   name <- getLine
+ *   _ <- putLine("Hello, " ++ name)
+ * } yield ()
+ *
+ * |-> val ask = Req(PutLine("...", _ => Return(()))).flatMap(
+ * |  _ => Req(GetLine, s => Return(s)).flatMap(
+ * |    name => Req(PutLine("...", _ => Return(()))).map(
+ * |      _ => ()
+ * |    )
+ * |  )
+ * |)
+ *
+ * |-> val ask = Req(PutLine("...", _ => Return(()))).flatMap(
+ * |  _ => Req(GetLine, s => Return(s)).flatMap(
+ * |    name => Req(PutLine("...", _ => Return(()))).map(
+ * |      _ => ()
+ * |    )
+ * |  )
+ * |)
+ *
+ * |-> val ask = Req(PutLine("...", _ => Return(()))).flatMap(
+ * |  _ => Req(GetLine, s => Return(s)).flatMap(
+ * |    name => Req(PutLine("...", _ => Return(()))).flatMap(a => Return(()))
+ * |  )
+ * |)
+ *
+ * |-> val ask = Req(PutLine("...", _ => Return(()))).flatMap(
+ * |  _ => Req(GetLine, s => Return(s)).flatMap(
+ * |    name => Req(PutLine("...", _ => Return(())))
+ * |  )
+ * |)
+ *
+ * |-> val ask = Req(PutLine("...", _ => Return(()))).flatMap(
+ * |  _ => Req(GetLine, name => Req(PutLine(s"${name}", _ => Return(())))
+ * |)
+ *
+ * |-> val ask = Req(PutLine("...", _ => Return(()))).flatMap(
+ * |  _ => Req(GetLine, name => Req(PutLine(s"${name}", _ => Return(())))
+ * |) // TODO
+ */

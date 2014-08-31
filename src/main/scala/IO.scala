@@ -6,8 +6,21 @@ sealed trait IO[F[_], A] {
       case Req(r, k) =>
         Req(r, k andThen { _ flatMap f })
     }
+
   def map[B](f: A => B): IO[F, B] =
     flatMap { a => Return(f(a)) }
+
+  // execute the encoded request/return
+  def runIO[G[_]: Monad](f: F ~> G): G[A] = {
+    // implicitly finds implicit values of type Monad[G]
+    val G = implicitly[Monad[G]]
+    this match {
+      case Return(a) => G.unit(a)
+      case Req(r, k) =>
+        // do the continuation
+        G.bind(f(r))(k andThen (_.runIO(f)))
+    }
+  }
 }
 
 case class Return[F[_], A](a: A) extends IO[F, A]
@@ -15,6 +28,11 @@ case class Return[F[_], A](a: A) extends IO[F, A]
 case class Req[F[_], I, B](
                             i: F[I],
                             k: I => IO[F, B]) extends IO[F, B]
+
+// this seems unnecessary
+trait ~>[F[_], G[_]] {
+  def apply[A](f: F[A]): G[A]
+}
 
 // what is F? A higher-kinded type.
 // what is a free monad?
