@@ -1,14 +1,17 @@
+package free
+
 object main {
   import ConsoleIO._
   def main(args: Array[String]) {
     val ask: ConsoleIO[Unit] = for {
       _ <- putLine("What is your name?")
       name <- getLine
-      _ <- putLine("Hello, " ++ name)
+      _ <- putLine("Hello " ++ name)
     } yield ()
 
-    println(ask.runIO(StdEffect))
-    println(ask.runIO(ListEffect))
+    // println(ask.runIO(StdEffect))
+    val io = ask.runIO(ListEffect)
+    println(io.runState(InOut(List("x"), List())))
   }
 }
 

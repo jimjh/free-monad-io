@@ -1,6 +1,8 @@
+package free
+
 /** Implements an effect for Console using standard in and standard out. */
-object StdEffect extends Effect[Console] {
-  def apply[A](r: Console[A]): A =
+object StdEffect extends Effect[Console, Id] {
+  def apply[A](r: Console[A]): Id[A] =
     r match {
       case GetLine => readLine
       case PutLine(s) => println(s)

@@ -1,3 +1,5 @@
+package free
+
 // http://blog.higher-order.com/assets/scalaio.pdf
 sealed trait IO[F[_], A] {
   /** Chain Requests, Returns */
@@ -17,10 +19,18 @@ sealed trait IO[F[_], A] {
    */
 
   /** Execute the encoded request/return. */
-  def runIO(e: Effect[F]): A =
+  def runIO[G[_]: Monad](effect: Effect[F, G]): G[A] = {
+    // G[_]: Monad is mind-blowing - automatic casting?
+    // StdEffect extends Effect[Console, Id], but somehow Id gets cast to Monad[Id]?
+    val G = implicitly[Monad[G]]
+    // implicity[Monad[G]] is mind-blowing
     this match {
-      case Return(a) => a
-      case Req(r, k) => (k andThen { _.runIO(e)})(e(r))
+      case Return(a) => G.of(a)
+      case Req(req, k) => G.flatMap(effect(req))(k andThen { _.runIO(effect)})
+      // XXX The following doesn't work
+      //   (k andThen { _.runIO(e)})(effect(req))
+      // because effect(req) returns a Monad of A, not just A.
+    }
   }
 }
 

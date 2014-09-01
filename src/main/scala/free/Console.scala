@@ -1,3 +1,5 @@
+package free
+
 // This is basically an enum that is used to encode IO
 // operations and their parameters for Console.
 sealed trait Console[A]
