@@ -9,10 +9,10 @@ package object free {
 
   implicit val MonadListState: Monad[ListState] = new Monad[ListState] {
     def of[A](value: A): ListState[A] =
-      ListState(any => (value, any)) // TODO magic - why does this make sense?
+      ListState(any => (value, any))
     def flatMap[A, B](value: ListState[A])(f: A => ListState[B]): ListState[B] =
       value match {
-        case ListState(leftFunc) => // TODO magic - why does this make sense?
+        case ListState(leftFunc) =>
           ListState(leftFunc andThen { case (v1, inOut1) => f(v1).runState(inOut1) })
       }
     override def toString = s"free.MonadListState: ${getClass}"

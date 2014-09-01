@@ -38,6 +38,13 @@ sealed trait IO[OP[_], A] {
   /** Executes the encoded request/return operations using `effect`.
     *
     * Think of `F ~> G` as `Effect[F, G]`. Just syntax sugar.
+    *
+    * G[_]: Monad means that
+    * - we expect a higher-kinded type G, that
+    * - has an associated Monad that is passed in as an implicit Monad[G].
+    *
+    * @see https://twitter.github.io/scala_school/advanced-types.html
+    * @see http://stackoverflow.com/questions/2982276/what-is-a-context-bound-in-scala
     */
   def runIO[G[_]: Monad](effect: OP ~> G): G[A]
 }
@@ -47,9 +54,7 @@ case class Return[OP[_], A](value: A) extends IO[OP, A] {
     f(value)
 
   override def runIO[G[_]: Monad](effect: OP ~> G): G[A] = {
-    // TODO G[_]: Monad is mind-blowing - automatic casting?
-    // StdEffect extends Effect[Console, Id], but somehow Id gets cast to Monad[Id]?
-    // TODO implicity[Monad[G]] is mind-blowing
+    // implicity[Monad[G]] returns an implicit value of type Monad[G]
     val G: Monad[G] = implicitly[Monad[G]]
     G.of(value)
   }
@@ -63,6 +68,7 @@ case class Req[OP[_], I, A](op: OP[I],
     // Here, we compose k with f using flatMap.
 
   override def runIO[G[_]: Monad](effect: OP ~> G): G[A] = {
+    // implicity[Monad[G]] returns an implicit value of type Monad[G]
     val G: Monad[G] = implicitly[Monad[G]]
     G.flatMap(effect(op))(cont andThen { _ runIO effect })
     // XXX The following doesn't work
